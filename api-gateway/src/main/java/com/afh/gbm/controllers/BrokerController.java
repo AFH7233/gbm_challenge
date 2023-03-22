@@ -47,6 +47,6 @@ public class BrokerController {
         orderResponse.addError(BusinessErrorType.CLOSED_MARKET);
 
         // Implement order processing logic here
-        return new ResponseEntity<>(orderResponse, HttpStatus.OK);
+        return ResponseEntity.ok(orderResponse);
     }
 }
