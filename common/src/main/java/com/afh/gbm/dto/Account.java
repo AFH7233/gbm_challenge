@@ -2,7 +2,12 @@ package com.afh.gbm.dto;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 public class Account {
-    private double cash;
+
+    private  long id;
+    private BigDecimal cash;
+
 }

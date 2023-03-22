@@ -5,11 +5,9 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 @Data
-public class Order {
-    private long timestamp;
-    private String operation;
+public class Issuer {
     private String issuerName;
     private int totalShares;
     private BigDecimal sharePrice;
-
 }
+
