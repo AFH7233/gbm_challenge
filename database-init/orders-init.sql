@@ -21,4 +21,24 @@ BEGIN
 INSERT INTO OrderHistory (account_id, operation, issuer_name, total_shares, share_price, timestamp)
 VALUES (p_account_id, p_operation, p_issuer_name, p_total_shares, p_share_price, p_timestamp);
 END //
+
+CREATE PROCEDURE get_shares_held_by_account(
+    IN p_account_id BIGINT
+)
+BEGIN
+SELECT
+    issuer_name,
+    SUM(CASE WHEN operation = 'BUY' THEN total_shares ELSE -total_shares END) AS total_shares,
+    MAX(share_price) AS last_share_price
+FROM
+    OrderHistory
+WHERE
+        account_id = p_account_id
+GROUP BY
+    issuer_name
+HAVING
+        total_shares > 0;
+
+END //
+
 DELIMITER ;

@@ -2,9 +2,11 @@ package com.afh.gbm.controllers;
 
 
 import com.afh.gbm.compound.AccountBalance;
+import com.afh.gbm.constants.AccountTransactionType;
 import com.afh.gbm.constants.BusinessErrorType;
 import com.afh.gbm.constants.OrderType;
-import com.afh.gbm.dto.Issuer;
+import com.afh.gbm.dto.Account;
+import com.afh.gbm.dto.AccountTransaction;
 import com.afh.gbm.dto.Order;
 import com.afh.gbm.responses.OrderResponse;
 import com.afh.gbm.services.interfaces.BusinessValidatorService;
@@ -15,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
@@ -22,7 +25,7 @@ import java.math.BigDecimal;
 import java.util.*;
 
 @RestController
-@RequestMapping("/accounts")
+@RequestMapping("/orders")
 public class OrderController {
 
     private final WebClient accountServiceClient;
@@ -40,77 +43,67 @@ public class OrderController {
         this.businessValidatorService = businessValidatorService;
         this.orderService = orderService;
     }
-    @PostMapping(value = "/{accountId}/orders",  produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/{accountId}",  produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<OrderResponse> processOrder(
             @PathVariable("accountId") long accountId,
             @RequestBody Order order) {
+        AccountBalance accountBalance = getAccountBalance(accountId);
 
-        Mono<AccountBalance> accountBalanceMono = accountServiceClient.post()
-                .uri("/accounts/{accountId}/balance", accountId)
-                .retrieve()
-                .bodyToMono(AccountBalance.class);
-
-        AccountBalance accountBalance = accountBalanceMono.block();
         Set<BusinessErrorType> businessErrorTypes = businessValidatorService.validateBusinessRules(order, accountBalance);
         OrderResponse orderResponse = new OrderResponse(accountBalance);
         orderResponse.setBusinessErrors(businessErrorTypes);
         if(businessErrorTypes.isEmpty()){
             orderService.createOrder(accountId, order);
-            if(order.getOperation().equals(OrderType.SELL.toString())){
-                AccountBalance updatedBalance = updateAfterSellAccountBalance(order, accountBalance);
-                orderResponse.setCurrentBalance(updatedBalance);
-            } else if(order.getOperation().equals(OrderType.BUY.toString())){
-                AccountBalance updatedBalance = updateAfterBuyAccountBalance(order, accountBalance);
-                orderResponse.setCurrentBalance(updatedBalance);
-            }
+            updateAccount(accountId, order);
+            AccountBalance updatedAccountBalance = getAccountBalance(accountId);
+            orderResponse.setCurrentBalance(updatedAccountBalance);
         }
 
         return new ResponseEntity<>(orderResponse, HttpStatus.OK);
     }
 
-    private AccountBalance updateAfterBuyAccountBalance(Order order, AccountBalance accountBalance){
-        Map<String, Issuer> issuersMap = new HashMap<>(accountBalance.getIssuersMap());
-        BigDecimal remaining = accountBalance.getCash().subtract( order.getSharePrice().multiply(new BigDecimal(order.getTotalShares())));
-        if(issuersMap.containsKey(order.getIssuerName())){
-            Issuer issuer = issuersMap.get(order.getIssuerName());
-            Issuer updatedIssuer = new Issuer();
-            updatedIssuer.setIssuerName(issuer.getIssuerName());
-            updatedIssuer.setSharePrice(issuer.getSharePrice());
-            updatedIssuer.setTotalShares(issuer.getTotalShares() + order.getTotalShares());
-            issuersMap.put(updatedIssuer.getIssuerName(), updatedIssuer);
-        } else {
-            Issuer issuer = new Issuer();
-            issuer.setIssuerName(order.getIssuerName());
-            issuer.setSharePrice(order.getSharePrice());
-            issuer.setTotalShares(order.getTotalShares());
-            issuersMap.put(issuer.getIssuerName(), issuer);
+    private void updateAccount(long accountId, Order order) {
+        if(order.getOperation().equals(OrderType.SELL.toString())){
+            AccountTransaction accountTransaction = new AccountTransaction();
+            accountTransaction.setAccountId(accountId);
+            accountTransaction.setTimestamp(order.getTimestamp());
+            accountTransaction.setAmount(order.getSharePrice().multiply(new BigDecimal(order.getTotalShares())));
+            accountTransaction.setTransactionType(AccountTransactionType.DEPOSIT);
+            Mono<Account> depositCash = accountServiceClient.post()
+                    .uri("/accounts/transaction")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(BodyInserters.fromValue(accountTransaction))
+                    .retrieve()
+                    .bodyToMono(Account.class);
+            depositCash.block();
+        } else if(order.getOperation().equals(OrderType.BUY.toString())){
+            AccountTransaction accountTransaction = new AccountTransaction();
+            accountTransaction.setAccountId(accountId);
+            accountTransaction.setTimestamp(order.getTimestamp());
+            accountTransaction.setAmount(order.getSharePrice().multiply(new BigDecimal(order.getTotalShares())));
+            accountTransaction.setTransactionType(AccountTransactionType.RETIRE);
+            Mono<Account> retrieveCash = accountServiceClient.post()
+                    .uri("/accounts/transaction")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(BodyInserters.fromValue(accountTransaction))
+                    .retrieve()
+                    .bodyToMono(Account.class);
+            retrieveCash.block();
         }
-        AccountBalance updatedBalance = new AccountBalance();
-        updatedBalance.setId(accountBalance.getId());
-        updatedBalance.setCash(remaining);
-        updatedBalance.setIssuers(new ArrayList<>(issuersMap.values()));
-        return updatedBalance;
     }
 
-    private AccountBalance updateAfterSellAccountBalance(Order order, AccountBalance accountBalance){
-        Map<String, Issuer> issuersMap = new HashMap<>(accountBalance.getIssuersMap());
-        Issuer issuer = issuersMap.get(order.getIssuerName());
-        BigDecimal cash = accountBalance.getCash().add( order.getSharePrice().multiply(new BigDecimal(order.getTotalShares())));
+    private AccountBalance getAccountBalance(long accountId) {
+        Mono<Account> accountMono = accountServiceClient.get()
+                .uri("/accounts/{accountId}", accountId)
+                .retrieve()
+                .bodyToMono(Account.class);
+        Account account = accountMono.block();
 
-        if (issuer.getTotalShares() == order.getTotalShares())  {
-            issuersMap.remove(issuer.getIssuerName());
-
-        } else {
-            Issuer updatedIssuer = new Issuer();
-            updatedIssuer.setIssuerName(issuer.getIssuerName());
-            updatedIssuer.setSharePrice(issuer.getSharePrice());
-            updatedIssuer.setTotalShares(issuer.getTotalShares() - order.getTotalShares());
-            issuersMap.put(updatedIssuer.getIssuerName(), updatedIssuer);
-        }
-        AccountBalance updatedBalance = new AccountBalance();
-        updatedBalance.setId(accountBalance.getId());
-        updatedBalance.setCash(cash);
-        updatedBalance.setIssuers(new ArrayList<>(issuersMap.values()));
-        return updatedBalance;
+        AccountBalance accountBalance = new AccountBalance();
+        accountBalance.setId(accountId);
+        accountBalance.setCash(account.getCash());
+        accountBalance.setIssuers(orderService.getSharesHeldByAccount(accountId));
+        return accountBalance;
     }
+
 }
