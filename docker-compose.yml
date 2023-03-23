@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  mysql-db:
+  accounts-db:
     image: mysql:8.0
-    container_name: mysql-db
+    container_name: accounts-db
     environment:
       MYSQL_ROOT_PASSWORD: wowsosecure
       MYSQL_DATABASE: account_service_db
@@ -12,7 +12,20 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./database-init/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database-init/accounts-init.sql:/docker-entrypoint-initdb.d/accounts-init.sql
+
+  orders-db:
+    image: mysql:8.0
+    container_name: orders-db
+    environment:
+      MYSQL_ROOT_PASSWORD: wowsosecure
+      MYSQL_DATABASE: orders_service_db
+      MYSQL_USER: foo
+      MYSQL_PASSWORD: bar
+    ports:
+      - "3308:3306"
+    volumes:
+      - ./database-init/orders-init.sql:/docker-entrypoint-initdb.d/orders-init.sql
 
 volumes:
   mysql-data:
