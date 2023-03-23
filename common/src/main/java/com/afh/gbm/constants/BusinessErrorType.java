@@ -1,4 +1,4 @@
-package com.afh.gbm.dto;
+package com.afh.gbm.constants;
 
 public enum BusinessErrorType {
     INSUFFICIENT_BALANCE,
