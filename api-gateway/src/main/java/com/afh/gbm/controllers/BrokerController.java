@@ -2,24 +2,38 @@ package com.afh.gbm.controllers;
 
 import com.afh.gbm.dto.*;
 import com.afh.gbm.responses.OrderResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/accounts")
 public class BrokerController {
+    private final WebClient accountServiceClient;
+
+    public BrokerController(@Value("${account-service.base-url}") String accountServiceBaseUrl) {
+        this.accountServiceClient = WebClient.builder()
+                .baseUrl(accountServiceBaseUrl)
+                .build();
+    }
+
     @PostMapping
-    public ResponseEntity<AccountBalance> createAccount(@RequestBody Account account) {
-        // Implement account creation logic here
-        BigDecimal initialBalance = account.getCash();
-        AccountBalance accountBalance = new AccountBalance();
-        accountBalance.setCash(initialBalance);
-        accountBalance.setId(29837L);
-        return new ResponseEntity<>(accountBalance, HttpStatus.CREATED);
+    public Mono<ResponseEntity<AccountBalance>> createAccount(@RequestBody Account account) {
+        return accountServiceClient.post()
+                .uri("/accounts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(account)
+                .retrieve()
+                .toEntity(AccountBalance.class)
+                .map(responseEntity -> ResponseEntity.status(responseEntity.getStatusCode())
+                        .headers(responseEntity.getHeaders())
+                        .body(responseEntity.getBody()));
     }
 
     @PostMapping(value = "/{accountId}/orders",  produces = MediaType.APPLICATION_JSON_VALUE)
