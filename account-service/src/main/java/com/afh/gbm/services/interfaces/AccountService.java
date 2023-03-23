@@ -1,10 +1,13 @@
 package com.afh.gbm.services.interfaces;
 
 import com.afh.gbm.dto.Account;
-import com.afh.gbm.dto.AccountBalance;
+import com.afh.gbm.compound.AccountBalance;
+import com.afh.gbm.dto.AccountTransaction;
 
 public interface AccountService {
-    AccountBalance createAccount(Account account) ;
+    Account createAccount(AccountTransaction accountTransaction) ;
 
-    AccountBalance checkAccountBalance(long accountId);
+    Account updateTransaction(AccountTransaction accountTransaction);
+
+    Account getAccount(long accountId);
 }
