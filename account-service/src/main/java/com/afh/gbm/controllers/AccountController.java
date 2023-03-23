@@ -3,7 +3,7 @@ package com.afh.gbm.controllers;
 
 import com.afh.gbm.dto.Account;
 import com.afh.gbm.dto.AccountBalance;
-import com.afh.gbm.services.interfaces.AccountServiceImpl;
+import com.afh.gbm.services.interfaces.AccountService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 public class AccountController {
 
     @Autowired
-    private AccountServiceImpl accountService;
+    private AccountService accountService;
 
     @PostMapping
     public ResponseEntity<AccountBalance> createAccount(@RequestBody Account account) {

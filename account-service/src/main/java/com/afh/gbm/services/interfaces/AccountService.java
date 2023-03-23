@@ -3,8 +3,8 @@ package com.afh.gbm.services.interfaces;
 import com.afh.gbm.dto.Account;
 import com.afh.gbm.dto.AccountBalance;
 
-public interface AccountServiceImpl {
+public interface AccountService {
     AccountBalance createAccount(Account account) ;
 
-    AccountBalance checkAccountBalance(Long accountId);
+    AccountBalance checkAccountBalance(long accountId);
 }
