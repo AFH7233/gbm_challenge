@@ -7,6 +7,7 @@ import com.afh.gbm.constants.OrderType;
 import com.afh.gbm.dto.Account;
 import com.afh.gbm.dto.AccountTransaction;
 import com.afh.gbm.dto.Order;
+import com.afh.gbm.exceptions.BrokerAccountNotFoundException;
 import com.afh.gbm.responses.OrderResponse;
 import com.afh.gbm.services.interfaces.BusinessValidatorService;
 import com.afh.gbm.services.interfaces.OrderService;
@@ -18,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
@@ -90,7 +92,15 @@ public class OrderController {
               .contentType(MediaType.APPLICATION_JSON)
               .body(BodyInserters.fromValue(accountTransaction))
               .retrieve()
-              .bodyToMono(Account.class);
+              .bodyToMono(Account.class)
+              .onErrorResume(
+                  error -> {
+                    if (error instanceof WebClientResponseException.NotFound) {
+                      throw new BrokerAccountNotFoundException(accountId);
+                    } else {
+                      return Mono.error(error);
+                    }
+                  });
       depositCash.block();
     } else if (order.getOperation().equals(OrderType.BUY.toString())) {
       AccountTransaction accountTransaction = new AccountTransaction();
@@ -106,7 +116,15 @@ public class OrderController {
               .contentType(MediaType.APPLICATION_JSON)
               .body(BodyInserters.fromValue(accountTransaction))
               .retrieve()
-              .bodyToMono(Account.class);
+              .bodyToMono(Account.class)
+              .onErrorResume(
+                  error -> {
+                    if (error instanceof WebClientResponseException.NotFound) {
+                      throw new BrokerAccountNotFoundException(accountId);
+                    } else {
+                      return Mono.error(error);
+                    }
+                  });
       retrieveCash.block();
     }
   }
@@ -117,7 +135,15 @@ public class OrderController {
             .get()
             .uri("/accounts/{accountId}", accountId)
             .retrieve()
-            .bodyToMono(Account.class);
+            .bodyToMono(Account.class)
+            .onErrorResume(
+                error -> {
+                  if (error instanceof WebClientResponseException.NotFound) {
+                    throw new BrokerAccountNotFoundException(accountId);
+                  } else {
+                    return Mono.error(error);
+                  }
+                });
     Account account = accountMono.block();
 
     AccountBalance accountBalance = new AccountBalance();

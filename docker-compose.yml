@@ -10,7 +10,7 @@ services:
       MYSQL_USER: foo
       MYSQL_PASSWORD: bar
     ports:
-      - "3306"
+      - "3306:3306"
     volumes:
       - ./database-init/accounts-init.sql:/docker-entrypoint-initdb.d/accounts-init.sql
     networks:
@@ -25,7 +25,7 @@ services:
       MYSQL_USER: foo
       MYSQL_PASSWORD: bar
     ports:
-      - "3306"
+      - "3308:3306"
     volumes:
       - ./database-init/orders-init.sql:/docker-entrypoint-initdb.d/orders-init.sql
     networks:
