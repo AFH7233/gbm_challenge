@@ -23,7 +23,6 @@
     </properties>
 
     <modules>
-        <module>api-gateway</module>
         <module>account-service</module>
         <module>order-service</module>
         <module>common</module>

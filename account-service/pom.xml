@@ -13,11 +13,6 @@
     <artifactId>account-service</artifactId>
     <version>1.0.0</version>
 
-    <properties>
-        <java.version>1.8</java.version>
-        <spring.boot.version>2.5.4</spring.boot.version>
-    </properties>
-
     <dependencies>
         <!-- Spring Boot -->
         <dependency>

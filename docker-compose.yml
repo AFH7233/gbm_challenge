@@ -10,9 +10,11 @@ services:
       MYSQL_USER: foo
       MYSQL_PASSWORD: bar
     ports:
-      - "3306:3306"
+      - "3306"
     volumes:
       - ./database-init/accounts-init.sql:/docker-entrypoint-initdb.d/accounts-init.sql
+    networks:
+      - gbm-network
 
   orders-db:
     image: mysql:8.0
@@ -23,9 +25,67 @@ services:
       MYSQL_USER: foo
       MYSQL_PASSWORD: bar
     ports:
-      - "3308:3306"
+      - "3306"
     volumes:
       - ./database-init/orders-init.sql:/docker-entrypoint-initdb.d/orders-init.sql
+    networks:
+      - gbm-network
+
+  account-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: account-service
+    container_name: account-service
+    image: account-service:latest
+    ports:
+      - "8081"
+    depends_on:
+      - accounts-db
+    environment:
+      ACCOUNT_SERVICE_DB_URL: jdbc:mysql://accounts-db:3306/account_service_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
+      ACCOUNT_SERVICE_DB_USER: foo
+      ACCOUNT_SERVICE_DB_PASSWORD: bar
+    networks:
+      - gbm-network
+
+  order-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: order-service
+    container_name: order-service
+    image: order-service:latest
+    ports:
+      - "8082"
+    depends_on:
+      - orders-db
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      ORDERS_SERVICE_DB_URL: jdbc:mysql://orders-db:3306/orders_service_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
+      ORDERS_SERVICE_DB_USER: foo
+      ORDERS_SERVICE_DB_PASSWORD: bar
+      ACCOUNT_SERVICE_ENDPOINT: http://account-service:8081
+    networks:
+      - gbm-network
+
+  gateway:
+    image: nginx:stable-alpine
+    container_name: gateway
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - account-service
+      - order-service
+    networks:
+      - gbm-network
 
 volumes:
   mysql-data:
+
+networks:
+  gbm-network:
