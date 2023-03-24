@@ -64,7 +64,7 @@ public class BusinessValidatorServiceImpl implements BusinessValidatorService {
       businessErrorTypes.add(BusinessErrorType.CLOSED_MARKET);
     }
 
-    if(order.getTotalShares() == 0 || order.getSharePrice().compareTo(BigDecimal.ZERO) < 0){
+    if(order.getTotalShares() <= 0 || order.getSharePrice().compareTo(BigDecimal.ZERO) <= 0){
       businessErrorTypes.add(BusinessErrorType.INVALID_OPERATION);
     }
 
