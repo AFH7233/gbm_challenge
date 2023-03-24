@@ -18,10 +18,10 @@ import java.util.Set;
 @Service
 public class BusinessValidatorServiceImpl implements BusinessValidatorService {
 
-    @Value("${market.open.time}")
+    @Value("${market.open.time:06:00}")
     private String marketOpenTime;
 
-    @Value("${market.close.time}")
+    @Value("${market.close.time:15:00}")
     private String marketCloseTime;
     public Set<BusinessErrorType> validateBusinessRules(Order order, AccountBalance accountBalance){
         Set<BusinessErrorType> businessErrorTypes = new HashSet<>();
