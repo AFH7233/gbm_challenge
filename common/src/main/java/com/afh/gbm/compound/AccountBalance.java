@@ -15,28 +15,34 @@ import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Setter;
 
+/**
+ * Current balance of the user, total cash in wallet and stocks owned.
+ *
+ * @author Andres Fuentes Hernandez
+ */
 @Data
 public class AccountBalance {
-    private long id;
-    private BigDecimal cash;
-    @Setter(AccessLevel.NONE)
-    @JsonIgnore
-    private Map<String, Issuer> issuersMap;
+  private long id;
+  private BigDecimal cash;
 
-    {
-        this.issuersMap = new HashMap();
-    }
+  @Setter(AccessLevel.NONE)
+  @JsonIgnore
+  private Map<String, Issuer> issuersMap;
 
-    public void addIssuer(Issuer issuer) {
-        issuersMap.putIfAbsent(issuer.getIssuerName(), issuer);
-    }
+  {
+    this.issuersMap = new HashMap();
+  }
 
-    public List<Issuer> getIssuers(){
-        return new ArrayList<>(issuersMap.values());
-    }
+  public void addIssuer(Issuer issuer) {
+    issuersMap.putIfAbsent(issuer.getIssuerName(), issuer);
+  }
 
-    public void setIssuers(List<Issuer> issuersList){
-        this.issuersMap = issuersList.stream()
-                .collect(Collectors.toMap(Issuer::getIssuerName, Function.identity()));
-    }
+  public List<Issuer> getIssuers() {
+    return new ArrayList<>(issuersMap.values());
+  }
+
+  public void setIssuers(List<Issuer> issuersList) {
+    this.issuersMap =
+        issuersList.stream().collect(Collectors.toMap(Issuer::getIssuerName, Function.identity()));
+  }
 }
