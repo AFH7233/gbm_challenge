@@ -95,7 +95,8 @@ public class BusinessValidatorServiceImpl implements BusinessValidatorService {
     Optional<Order> latestOrderOptional = orderDAO.getLastOrderByAccount(accountId);
 
     if (latestOrderOptional.isPresent()
-        && latestOrderOptional.get().getIssuerName().equals(order.getIssuerName())) {
+        && latestOrderOptional.get().getIssuerName().equals(order.getIssuerName())
+        && latestOrderOptional.get().getTotalShares() == order.getTotalShares()) {
       Order latestOrder = latestOrderOptional.get();
       Instant latestOrderInstant = Instant.ofEpochMilli(latestOrder.getTimestamp());
       Instant newOrderInstant = Instant.ofEpochMilli(order.getTimestamp());
