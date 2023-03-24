@@ -1,4 +1,4 @@
-# Use Maven with OpenJDK 8 as the base image
+# Use Maven with OpenJDK 11 as the base image
 FROM maven:3.8.4-openjdk-11 as build
 
 # Set the working directory
@@ -8,7 +8,7 @@ WORKDIR /app
 COPY pom.xml .
 RUN mvn install -N -DskipTests
 
-# Copy common files
+# Copy common project
 COPY common/pom.xml common/
 COPY common/src common/src/
 RUN mvn install -DskipTests -f common/pom.xml
@@ -34,5 +34,5 @@ WORKDIR /app
 # Copy the built JAR file from the build stage
 COPY --from=build /app/${SERVICE_NAME}/target/*.jar app.jar
 
-# Run the application with the dev profile
-ENTRYPOINT ["sh", "-c", "sleep 30 && java -jar app.jar --spring.profiles.active=dev"]
+# Wait for data bases and tun the application with the dev profile
+ENTRYPOINT ["sh", "-c", "sleep 25 && java -jar app.jar --spring.profiles.active=dev"]
