@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS OrderHistory (
-                                            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                            account_id BIGINT NOT NULL,
-                                            operation ENUM('BUY', 'SELL') NOT NULL,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    account_id BIGINT NOT NULL,
+    operation ENUM('BUY', 'SELL') NOT NULL,
     issuer_name VARCHAR(255) NOT NULL,
     total_shares INT NOT NULL,
     share_price DECIMAL(10, 2) NOT NULL,
@@ -39,6 +39,19 @@ GROUP BY
 HAVING
         total_shares > 0;
 
+END //
+
+CREATE PROCEDURE get_last_order_by_account(
+    IN p_account_id BIGINT
+)
+BEGIN
+SELECT *
+FROM OrderHistory
+WHERE account_id = p_account_id AND timestamp = (
+    SELECT MAX(timestamp)
+    FROM OrderHistory
+    WHERE account_id = p_account_id
+    );
 END //
 
 DELIMITER ;

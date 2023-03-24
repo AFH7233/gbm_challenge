@@ -1,6 +1,5 @@
 package com.afh.gbm.controllers;
 
-
 import com.afh.gbm.compound.AccountBalance;
 import com.afh.gbm.constants.AccountTransactionType;
 import com.afh.gbm.constants.BusinessErrorType;
@@ -24,86 +23,107 @@ import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
 import java.util.*;
 
+/**
+ * REST controller for handling orders-related operations.
+ *
+ * @author Andres Fuentes Hernandez
+ */
 @RestController
 @RequestMapping("/orders")
 public class OrderController {
 
-    private final WebClient accountServiceClient;
+  private final WebClient accountServiceClient;
 
-    private final BusinessValidatorService businessValidatorService;
+  private final BusinessValidatorService businessValidatorService;
 
-    private final OrderService orderService;
+  private final OrderService orderService;
 
-    public OrderController(@Value("${account-service.base-url}") String accountServiceBaseUrl,
-                           @Autowired BusinessValidatorService businessValidatorService,
-                           @Autowired OrderService orderService) {
-        this.accountServiceClient = WebClient.builder()
-                .baseUrl(accountServiceBaseUrl)
-                .build();
-        this.businessValidatorService = businessValidatorService;
-        this.orderService = orderService;
-    }
-    @PostMapping(value = "/{accountId}",  produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<OrderResponse> processOrder(
-            @PathVariable("accountId") long accountId,
-            @RequestBody Order order) {
-        AccountBalance accountBalance = getAccountBalance(accountId);
+  public OrderController(
+      @Value("${account-service.base-url}") String accountServiceBaseUrl,
+      @Autowired BusinessValidatorService businessValidatorService,
+      @Autowired OrderService orderService) {
+    this.accountServiceClient = WebClient.builder().baseUrl(accountServiceBaseUrl).build();
+    this.businessValidatorService = businessValidatorService;
+    this.orderService = orderService;
+  }
 
-        Set<BusinessErrorType> businessErrorTypes = businessValidatorService.validateBusinessRules(order, accountBalance);
-        OrderResponse orderResponse = new OrderResponse(accountBalance);
-        orderResponse.setBusinessErrors(businessErrorTypes);
-        if(businessErrorTypes.isEmpty()){
-            orderService.createOrder(accountId, order);
-            updateAccount(accountId, order);
-            AccountBalance updatedAccountBalance = getAccountBalance(accountId);
-            orderResponse.setCurrentBalance(updatedAccountBalance);
-        }
+  /**
+   * Processes an order for the given account by validating the order against business rules,
+   * updating the account's balance, and creating an order history entry.
+   *
+   * @param accountId The ID of the account for which the order is being processed.
+   * @param order The order to be processed.
+   * @return A {@link ResponseEntity} containing an {@link OrderResponse} object with the current
+   *     account balance and any business errors found.
+   */
+  @PostMapping(value = "/{accountId}", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<OrderResponse> processOrder(
+      @PathVariable("accountId") long accountId, @RequestBody Order order) {
+    AccountBalance accountBalance = getAccountBalance(accountId);
 
-        return new ResponseEntity<>(orderResponse, HttpStatus.OK);
-    }
-
-    private void updateAccount(long accountId, Order order) {
-        if(order.getOperation().equals(OrderType.SELL.toString())){
-            AccountTransaction accountTransaction = new AccountTransaction();
-            accountTransaction.setAccountId(accountId);
-            accountTransaction.setTimestamp(order.getTimestamp());
-            accountTransaction.setAmount(order.getSharePrice().multiply(new BigDecimal(order.getTotalShares())));
-            accountTransaction.setTransactionType(AccountTransactionType.DEPOSIT);
-            Mono<Account> depositCash = accountServiceClient.post()
-                    .uri("/accounts/transaction")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(BodyInserters.fromValue(accountTransaction))
-                    .retrieve()
-                    .bodyToMono(Account.class);
-            depositCash.block();
-        } else if(order.getOperation().equals(OrderType.BUY.toString())){
-            AccountTransaction accountTransaction = new AccountTransaction();
-            accountTransaction.setAccountId(accountId);
-            accountTransaction.setTimestamp(order.getTimestamp());
-            accountTransaction.setAmount(order.getSharePrice().multiply(new BigDecimal(order.getTotalShares())));
-            accountTransaction.setTransactionType(AccountTransactionType.RETIRE);
-            Mono<Account> retrieveCash = accountServiceClient.post()
-                    .uri("/accounts/transaction")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(BodyInserters.fromValue(accountTransaction))
-                    .retrieve()
-                    .bodyToMono(Account.class);
-            retrieveCash.block();
-        }
+    Set<BusinessErrorType> businessErrorTypes =
+        businessValidatorService.validateBusinessRules(order, accountBalance);
+    OrderResponse orderResponse = new OrderResponse(accountBalance);
+    orderResponse.setBusinessErrors(businessErrorTypes);
+    if (businessErrorTypes.isEmpty()) {
+      orderService.createOrder(accountId, order);
+      updateAccount(accountId, order);
+      AccountBalance updatedAccountBalance = getAccountBalance(accountId);
+      orderResponse.setCurrentBalance(updatedAccountBalance);
     }
 
-    private AccountBalance getAccountBalance(long accountId) {
-        Mono<Account> accountMono = accountServiceClient.get()
-                .uri("/accounts/{accountId}", accountId)
-                .retrieve()
-                .bodyToMono(Account.class);
-        Account account = accountMono.block();
+    return new ResponseEntity<>(orderResponse, HttpStatus.OK);
+  }
 
-        AccountBalance accountBalance = new AccountBalance();
-        accountBalance.setId(accountId);
-        accountBalance.setCash(account.getCash());
-        accountBalance.setIssuers(orderService.getSharesHeldByAccount(accountId));
-        return accountBalance;
+  private void updateAccount(long accountId, Order order) {
+    if (order.getOperation().equals(OrderType.SELL.toString())) {
+      AccountTransaction accountTransaction = new AccountTransaction();
+      accountTransaction.setAccountId(accountId);
+      accountTransaction.setTimestamp(order.getTimestamp());
+      accountTransaction.setAmount(
+          order.getSharePrice().multiply(new BigDecimal(order.getTotalShares())));
+      accountTransaction.setTransactionType(AccountTransactionType.DEPOSIT);
+      Mono<Account> depositCash =
+          accountServiceClient
+              .post()
+              .uri("/accounts/transaction")
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(BodyInserters.fromValue(accountTransaction))
+              .retrieve()
+              .bodyToMono(Account.class);
+      depositCash.block();
+    } else if (order.getOperation().equals(OrderType.BUY.toString())) {
+      AccountTransaction accountTransaction = new AccountTransaction();
+      accountTransaction.setAccountId(accountId);
+      accountTransaction.setTimestamp(order.getTimestamp());
+      accountTransaction.setAmount(
+          order.getSharePrice().multiply(new BigDecimal(order.getTotalShares())));
+      accountTransaction.setTransactionType(AccountTransactionType.RETIRE);
+      Mono<Account> retrieveCash =
+          accountServiceClient
+              .post()
+              .uri("/accounts/transaction")
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(BodyInserters.fromValue(accountTransaction))
+              .retrieve()
+              .bodyToMono(Account.class);
+      retrieveCash.block();
     }
+  }
 
+  private AccountBalance getAccountBalance(long accountId) {
+    Mono<Account> accountMono =
+        accountServiceClient
+            .get()
+            .uri("/accounts/{accountId}", accountId)
+            .retrieve()
+            .bodyToMono(Account.class);
+    Account account = accountMono.block();
+
+    AccountBalance accountBalance = new AccountBalance();
+    accountBalance.setId(accountId);
+    accountBalance.setCash(account.getCash());
+    accountBalance.setIssuers(orderService.getSharesHeldByAccount(accountId));
+    return accountBalance;
+  }
 }
