@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  accounts-test-db:
+    image: mysql:8.0
+    container_name: accounts-test-db
+    environment:
+      MYSQL_ROOT_PASSWORD: wowsosecure
+      MYSQL_DATABASE: account_service_test_db
+      MYSQL_USER: foo
+      MYSQL_PASSWORD: bar
+    ports:
+      - "3306:3306"
+    volumes:
+      - ../database-init/accounts-init.sql:/docker-entrypoint-initdb.d/accounts-init.sql
+    networks:
+      - gbm-network
+
+  orders-test-db:
+    image: mysql:8.0
+    container_name: orders-test-db
+    environment:
+      MYSQL_ROOT_PASSWORD: wowsosecure
+      MYSQL_DATABASE: orders_service_test_db
+      MYSQL_USER: foo
+      MYSQL_PASSWORD: bar
+    ports:
+      - "3308:3306"
+    volumes:
+      - ../database-init/orders-init.sql:/docker-entrypoint-initdb.d/orders-init.sql
+    networks:
+      - gbm-network
+
+volumes:
+  mysql-data:
+
+networks:
+  gbm-network:

@@ -7,7 +7,7 @@ package com.afh.gbm.constants;
  */
 public enum AccountTransactionType {
     DEPOSIT,
-    RETIRE,
+    WITHDRAWAL,
     HOLD,
     CANCEL,
 }

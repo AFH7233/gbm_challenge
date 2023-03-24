@@ -9,10 +9,12 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.CallableStatementCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Handles CRUD operations on accounts and account transactions.
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Repository;
  */
 @SuppressWarnings("ALL")
 @Repository
+@Profile({"dev", "test"})
 public class AccountDAO {
 
   @Autowired private JdbcTemplate jdbcTemplate;
@@ -31,6 +34,7 @@ public class AccountDAO {
    * @param accountTransaction The initial transaction to be created with the account.
    * @return The created account with its initial cash value.
    */
+  @Transactional
   public Account createAccount(AccountTransaction accountTransaction) {
     String sql = "{call create_account()}";
     int accountId =
@@ -122,6 +126,7 @@ public class AccountDAO {
    *
    * @param accountTransaction The details of the transaction to be created.
    */
+  @Transactional
   public void createAccountTransaction(AccountTransaction accountTransaction) {
     long timestamp =
         Objects.isNull(accountTransaction.getTimestamp())
@@ -146,6 +151,7 @@ public class AccountDAO {
    *
    * @param accountTransaction The details of the transaction to be updated.
    */
+  @Transactional
   public void updateAccountTransaction(AccountTransaction accountTransaction) {
     String sql = "{call update_account_transaction(?, ?, ?, ?, ?)}";
     jdbcTemplate.execute(
