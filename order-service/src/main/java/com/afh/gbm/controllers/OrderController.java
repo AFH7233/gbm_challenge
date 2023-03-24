@@ -85,48 +85,36 @@ public class OrderController {
       accountTransaction.setAmount(
           order.getSharePrice().multiply(new BigDecimal(order.getTotalShares())));
       accountTransaction.setTransactionType(AccountTransactionType.DEPOSIT);
-      Mono<Account> depositCash =
-          accountServiceClient
-              .post()
-              .uri("/accounts/transaction")
-              .contentType(MediaType.APPLICATION_JSON)
-              .body(BodyInserters.fromValue(accountTransaction))
-              .retrieve()
-              .bodyToMono(Account.class)
-              .onErrorResume(
-                  error -> {
-                    if (error instanceof WebClientResponseException.NotFound) {
-                      throw new BrokerAccountNotFoundException(accountId);
-                    } else {
-                      return Mono.error(error);
-                    }
-                  });
-      depositCash.block();
+      executeTransaction(accountId, accountTransaction);
     } else if (order.getOperation().equals(OrderType.BUY.toString())) {
       AccountTransaction accountTransaction = new AccountTransaction();
       accountTransaction.setAccountId(accountId);
       accountTransaction.setTimestamp(order.getTimestamp());
       accountTransaction.setAmount(
           order.getSharePrice().multiply(new BigDecimal(order.getTotalShares())));
-      accountTransaction.setTransactionType(AccountTransactionType.RETIRE);
-      Mono<Account> retrieveCash =
-          accountServiceClient
-              .post()
-              .uri("/accounts/transaction")
-              .contentType(MediaType.APPLICATION_JSON)
-              .body(BodyInserters.fromValue(accountTransaction))
-              .retrieve()
-              .bodyToMono(Account.class)
-              .onErrorResume(
-                  error -> {
-                    if (error instanceof WebClientResponseException.NotFound) {
-                      throw new BrokerAccountNotFoundException(accountId);
-                    } else {
-                      return Mono.error(error);
-                    }
-                  });
-      retrieveCash.block();
+      accountTransaction.setTransactionType(AccountTransactionType.WITHDRAWAL);
+      executeTransaction(accountId, accountTransaction);
     }
+  }
+
+  private Account executeTransaction(long accountId, AccountTransaction accountTransaction) {
+    Mono<Account> result =
+        accountServiceClient
+            .post()
+            .uri("/accounts/transaction")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(BodyInserters.fromValue(accountTransaction))
+            .retrieve()
+            .bodyToMono(Account.class)
+            .onErrorResume(
+                error -> {
+                  if (error instanceof WebClientResponseException.NotFound) {
+                    throw new BrokerAccountNotFoundException(accountId);
+                  } else {
+                    return Mono.error(error);
+                  }
+                });
+    return result.block();
   }
 
   private AccountBalance getAccountBalance(long accountId) {

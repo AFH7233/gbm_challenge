@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Creates abd retrieves information about the Orders.
@@ -26,6 +27,7 @@ public class OrderDAO {
    * @param order The order containing details such as operation, issuer name, total shares, share
    *     price, and timestamp.
    */
+  @Transactional
   public void createOrder(long accountId, Order order) {
     Timestamp orderTimestamp = new Timestamp(order.getTimestamp());
     jdbcTemplate.update(
